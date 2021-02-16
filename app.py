@@ -9,10 +9,8 @@ import datetime
 
 login_manager = flask_login.LoginManager()
 
-# users = {'foo@bar.tld': {'password': 'secret'}}
-
 app = Flask(__name__)
-# login_manager.init_app(app)
+login_manager.init_app(app)
 app.secret_key = 'secret'
 # mail = Mail(app)
 
@@ -49,74 +47,42 @@ class User(db.Model):
     email = db.Column(db.String(50), nullable=False, unique=True)
     password=db.Column(db.String(20), nullable=False)
 
+class LoginUser(flask_login.UserMixin, User):
+    def get_id(self):
+        return self.id
+
 if __name__ == '__main__':
     db.create_all()
 
-# @login_manager.user_loader
-# def user_loader(user_id):
-#     # if email not in users:
-#     #     return
-#     user = User()
-#     user_id=user.id
-#     print(user_id)
-    
-#     user = session.query(User).filter(User.id==user_id).first()
-#     # user=User()
-#     print('45:', user)
-#     return user
-
-
-# @login_manager.request_loader
-# def request_loader(request):
-#     email = request.form.get('email')
-#     print('52:', email)
-#     user = session.query(User).filter(User.email == email).first()
-#     print(type(user))
-#     print(user)
-#     # if email!=user.email:
-#     #     return
-
-#     # user = User()
-#     # user.id = email
-
-    
-#     # user.is_authenticated = request.form['password'] == users[email['password']]
-#     # print(user)
-#     # user.is_authenticated = request.form.get('password') == user.password
-#     # user.is_authenticated=request.form['password']==user.password
-#     return user
+@login_manager.user_loader
+def user_loader(user_id):
+    return LoginUser.query.filter(LoginUser.id==user_id).one_or_none()
 
 @app.route('/', methods=['GET','POST'])
 def login():
     if request.method == "GET":
         return render_template('login.html')
-
-    # print(request.form.get('password'))
-    # email = request.form.get('email')
-    # print(email) 
-    # user = session.query(User).filter(User.email == email).one()    
-    # print(user) 
-    # if request.form['password'] == users[email]['password']:
-    #     user = User()
-    #     user.id = email
-    #     flask_login.login_user(user)
-    #     return redirect('/index')
-
-    # if request.form['password'] == user.password:        
-    #     flask_login.login_user(user)    
-    #     return redirect('/index')
-
-    # return 'Bad login'
+    else:
+        email = request.form.get("email")
+        try:
+            user = LoginUser.query.filter(LoginUser.email == email).one_or_none()
+            if user == None:
+                return render_template('login.html', error="ログインに失敗しました")
+            else:
+                flask_login.login_user(user, remember=True)
+        except Exception as e:
+            return redirect('/index')
+        return redirect('/index')
 
 # @app.route('/protected')
 # @flask_login.login_required
 # def protected():
 #     return 'Logged in as:' + flask_login.current_user.id
 
-# @app.route('/logout')
-# def logout():
-#     flask_login.logout_user()
-#     return redirect('/')
+@app.route('/logout')
+def logout():
+    flask_login.logout_user()
+    return redirect('/')
 
 # @login_manager.unauthorized_handler
 # def unauthorized_handler():
@@ -143,9 +109,10 @@ def register():
 def index():
     if request.method == 'GET':
         posts = Post.query.order_by(Post.due).all()        
-        # user_name = flask_login.current_user.name
+        user_name = flask_login.current_user.name
+        print(user_name)
         # print(user_name)
-        return render_template('index.html', posts=posts)
+        return render_template('index.html', posts=posts, user_name=user_name)
     
     else:
         #POSTされた内容を受け取る
