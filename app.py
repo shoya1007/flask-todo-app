@@ -1,8 +1,11 @@
+import os
 from flask import Flask, render_template, request, redirect
 from flask_sqlalchemy import SQLAlchemy
+from flask_mail import Mail, Message
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 import flask_login
+import datetime
 
 login_manager = flask_login.LoginManager()
 
@@ -10,10 +13,23 @@ login_manager = flask_login.LoginManager()
 
 app = Flask(__name__)
 # login_manager.init_app(app)
-app.secret_key='secret'
+app.secret_key = 'secret'
+# mail = Mail(app)
 
 #下記によってtodo.dbという名前のデータベースを設定
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todo.db'
+# メールサーバーとしてsmtp.sendgrid.netを指定
+# app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
+# # ポート番号として587を指定
+# app.config['MAIL_PORT'] = 587
+# # TLS通信を有効化
+# app.config['MAIL_USE_TLS'] = True
+# # 認証情報として、ユーザ名にapikey(全てのsendgridアカウントで共通)を指定
+# app.config['MAIL_USERNAME'] = 'apikey'
+# # 認証情報として、パスワードを設定
+# app.config['MAIL_PASSWORD'] = os.environ.get('SENDGRID_API_KEY')
+# app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+# mail=Mail(app)
 #dbを生成
 db=SQLAlchemy(app)
 
@@ -146,6 +162,7 @@ def index():
         db.session.add(new_post)
         #追加した内容を保存
         db.session.commit()
+        
         return redirect('/index')
 
 @app.route('/create')
