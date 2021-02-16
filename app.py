@@ -1,14 +1,15 @@
 from flask import Flask, render_template, request, redirect
 from flask_sqlalchemy import SQLAlchemy
-import datetime
+import sqlalchemy
+from sqlalchemy.orm import sessionmaker
 import flask_login
 
 login_manager = flask_login.LoginManager()
 
-users = {'foo@bar.tld': {'password': 'secret'}}
+# users = {'foo@bar.tld': {'password': 'secret'}}
 
 app = Flask(__name__)
-login_manager.init_app(app)
+# login_manager.init_app(app)
 app.secret_key='secret'
 
 #下記によってtodo.dbという名前のデータベースを設定
@@ -16,69 +17,94 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todo.db'
 #dbを生成
 db=SQLAlchemy(app)
 
+engine=sqlalchemy.create_engine('sqlite:///todo.db', echo=True)
+Session = sessionmaker(bind=engine)
+session = Session()
+
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(30), nullable=False)
     detail = db.Column(db.String(100))
     due = db.Column(db.DateTime, nullable=False)
 
-class User(flask_login.UserMixin, db.Model):
-    __tablename__='users'
+class User(db.Model):    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(50), nullable=False, unique=True)
     password=db.Column(db.String(20), nullable=False)
 
-@login_manager.user_loader
-def user_loader(email):
-    if email not in users:
-        return
+if __name__ == '__main__':
+    db.create_all()
+
+# @login_manager.user_loader
+# def user_loader(user_id):
+#     # if email not in users:
+#     #     return
+#     user = User()
+#     user_id=user.id
+#     print(user_id)
     
-    user = User()
-    user.id = email
-    return user
+#     user = session.query(User).filter(User.id==user_id).first()
+#     # user=User()
+#     print('45:', user)
+#     return user
 
 
-@login_manager.request_loader
-def request_loader(request):
-    email = request.form.get('email')
-    if email not in users:
-        return
+# @login_manager.request_loader
+# def request_loader(request):
+#     email = request.form.get('email')
+#     print('52:', email)
+#     user = session.query(User).filter(User.email == email).first()
+#     print(type(user))
+#     print(user)
+#     # if email!=user.email:
+#     #     return
 
-    user = User()
-    user.id = email
+#     # user = User()
+#     # user.id = email
+
     
-    user.is_authenticated = request.form['password'] == users[email['password']]
-    
-    return user
+#     # user.is_authenticated = request.form['password'] == users[email['password']]
+#     # print(user)
+#     # user.is_authenticated = request.form.get('password') == user.password
+#     # user.is_authenticated=request.form['password']==user.password
+#     return user
 
 @app.route('/', methods=['GET','POST'])
 def login():
     if request.method == "GET":
         return render_template('login.html')
 
-    email = request.form['email']
-    if request.form['password'] == users[email]['password']:
-        user = User()
-        user.id = email
-        flask_login.login_user(user)
-        return redirect('/index')
+    # print(request.form.get('password'))
+    # email = request.form.get('email')
+    # print(email) 
+    # user = session.query(User).filter(User.email == email).one()    
+    # print(user) 
+    # if request.form['password'] == users[email]['password']:
+    #     user = User()
+    #     user.id = email
+    #     flask_login.login_user(user)
+    #     return redirect('/index')
 
-    return 'Bad login'
+    # if request.form['password'] == user.password:        
+    #     flask_login.login_user(user)    
+    #     return redirect('/index')
+
+    # return 'Bad login'
 
 # @app.route('/protected')
 # @flask_login.login_required
 # def protected():
 #     return 'Logged in as:' + flask_login.current_user.id
 
-@app.route('/logout')
-def logout():
-    flask_login.logout_user()
-    return redirect('/')
+# @app.route('/logout')
+# def logout():
+#     flask_login.logout_user()
+#     return redirect('/')
 
-@login_manager.unauthorized_handler
-def unauthorized_handler():
-    return 'Unauthorized'
+# @login_manager.unauthorized_handler
+# def unauthorized_handler():
+#     return 'Unauthorized'
 
 @app.route('/register', methods=['GET','POST'])
 def register():
@@ -97,12 +123,13 @@ def register():
         return redirect('/')
 
 @app.route('/index', methods=['GET', 'POST'])
-@flask_login.login_required
+# @flask_login.login_required
 def index():
     if request.method == 'GET':
-        posts = Post.query.order_by(Post.due).all()
-        user_id=flask_login.current_user.id
-        return render_template('index.html', posts=posts, user_id=user_id)
+        posts = Post.query.order_by(Post.due).all()        
+        # user_name = flask_login.current_user.name
+        # print(user_name)
+        return render_template('index.html', posts=posts)
     
     else:
         #POSTされた内容を受け取る
